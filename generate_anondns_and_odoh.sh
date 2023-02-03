@@ -150,13 +150,13 @@ mv "$TEMP_TOML" "$OUTPUT_TOML"
 
 # Notify of completion
 echo "
-################################################################################
-Done, created the new config file here: $OUTPUT_TOML
+--------------------------------------------------------------------------------
+Ran $(basename "$0") and created the new config file here: $OUTPUT_TOML
 
 - DNSCrypt: Randomized $(wc -l < "$CRYPT_SERVERS_FILE") servers and $(wc -l < "$CRYPT_RELAYS_FILE") relays
 - ODoH: Randomized $(wc -l < "$ODOH_SERVERS_FILE") servers and $(wc -l < "$ODOH_RELAYS_FILE") relays
 - Used config template: $TEMPLATE_TOML
-################################################################################"
+--------------------------------------------------------------------------------"
 
 # Delete temp files no longer needed
 rm -f "$CRYPT_SERVERS_FILE"
