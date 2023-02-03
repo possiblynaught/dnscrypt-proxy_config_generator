@@ -47,6 +47,12 @@ source "$FUNCTION_FILE"
 [ -f "$TEMPLATE_TOML" ] || (echo "Error, toml config template not found: $TEMPLATE_TOML"; exit 1)
 # Create output file
 cp "$TEMPLATE_TOML" "$OUTPUT_TOML"
+# Disable doh
+sed -i "s/doh_servers = true/doh_servers = false/g" "$OUTPUT_TOML"
+# Block ipv6, may collide with dnsmasq dnssec option
+sed -i "s/block_ipv6 = false/block_ipv6 = true/g" "$OUTPUT_TOML"
+# Skip incompatible resolvers
+sed -i "s/skip_incompatible = false/skip_incompatible = true/g" "$OUTPUT_TOML"
 
 # Run if Anonymous DNSCrypt desired
 if [ "$USE_ANON" -eq 1 ]; then
@@ -54,6 +60,7 @@ if [ "$USE_ANON" -eq 1 ]; then
   ANON_SERVERS_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
   ANON_RELAYS_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
   get_anon_dnscrypt "$ANON_SERVERS_FILE" "$ANON_RELAYS_FILE"
+  insert_routes "$OUTPUT_TOML" "$ANON_SERVERS_FILE" "$ANON_RELAYS_FILE"
 fi
 
 # Run if Oblivious DoH desired
@@ -62,6 +69,8 @@ if [ "$USE_ODOH" -eq 1 ]; then
   ODOH_SERVERS_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
   ODOH_RELAYS_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
   get_odoh "$ODOH_SERVERS_FILE" "$ODOH_RELAYS_FILE"
+  enable_odoh "$OUTPUT_TOML"
+  insert_routes "$OUTPUT_TOML" "$ODOH_SERVERS_FILE" "$ODOH_RELAYS_FILE"
 fi
 
 # Run if standard (non-anonymous) DNSCrypt desired
@@ -69,22 +78,8 @@ if [ "$USE_CRYPT" -eq 1 ]; then
   # TODO: Finish this block
   echo "Warning, option has not been implemented yet!"
   exit 1
+  insert_routes "$OUTPUT_TOML" "$CRYPT_SERVERS_FILE"
 fi
-
-# Disable doh
-sed -i "s/doh_servers = true/doh_servers = false/g" "$OUTPUT_TOML"
-# Block ipv6, may collide with dnsmasq dnssec option
-sed -i "s/block_ipv6 = false/block_ipv6 = true/g" "$OUTPUT_TOML"
-# Skip incompatible resolvers
-sed -i "s/skip_incompatible = false/skip_incompatible = true/g" "$OUTPUT_TOML"
-
-# If using odoh, enable it and add config if not already present
-[ "$USE_ODOH" -eq 1 ] && enable_odoh "$OUTPUT_TOML"
-
-# Insert routes
-[ "$USE_ANON" -eq 1 ] && insert_routes "$OUTPUT_TOML" "$ANON_SERVERS_FILE" "$ANON_RELAYS_FILE"
-[ "$USE_ODOH" -eq 1 ] && insert_routes "$OUTPUT_TOML" "$ODOH_SERVERS_FILE" "$ODOH_RELAYS_FILE"
-[ "$USE_CRYPT" -eq 1 ] && insert_routes "$OUTPUT_TOML" "$CRYPT_SERVERS_FILE"
 
 # Notify of completion
 echo "
