@@ -11,7 +11,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
 # Default file paths
 TEMPLATE_TOML="$SCRIPT_DIR/example-dnscrypt-proxy.toml"
 OUTPUT_TOML="/tmp/dnscrypt-proxy.toml"
-# Max num of servers/relays to add from Anonymous DNSCrypt and ODoH
+# Max num of servers/relays to add from ODoH
 MAX_SERVERS=7
 MAX_RELAYS=5
 ################################################################################

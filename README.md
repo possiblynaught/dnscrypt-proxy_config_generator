@@ -8,6 +8,7 @@ listen_addresses = ['127.0.0.53:53']
 ## TODO
 
 - [x] Copy a base toml to dir
+- [ ] Make scripts inherit others or functions
 - [ ] Finish anondns script
 - [ ] Finish odoh script
 - [ ] Finish dnscrypt script
