@@ -8,6 +8,6 @@ listen_addresses = ['127.0.0.53:53']
 ## TODO
 
 - [x] Copy a base toml to dir
+- [ ] Figure out why the pipefail is showing error
 - [ ] Finish standard dnscrypt config
 - [ ] Finish readme + guide
-- [ ] Flip to sdns instead of names?

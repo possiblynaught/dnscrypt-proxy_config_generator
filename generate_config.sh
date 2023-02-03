@@ -97,8 +97,6 @@ echo "- Used config template: $TEMPLATE_TOML
 --------------------------------------------------------------------------------"
 
 # Delete temp files no longer needed
-[ -f "$ANON_SERVERS_FILE" ] && rm -f "$ANON_SERVERS_FILE"
-[ -f "$ANON_RELAYS_FILE" ] && rm -f "$ANON_RELAYS_FILE"
-[ -f "$ODOH_SERVERS_FILE" ] && rm -f "$ODOH_SERVERS_FILE"
-[ -f "$ODOH_RELAYS_FILE" ] && rm -f "$ODOH_RELAYS_FILE"
-[ -f "$CRYPT_SERVERS_FILE" ] && rm -f "$CRYPT_SERVERS_FILE"
+[ "$USE_ANON" -eq 1 ] && rm -f "$ANON_SERVERS_FILE"; rm -f "$ANON_RELAYS_FILE"
+[ "$USE_ODOH" -eq 1 ] && rm -f "$ODOH_SERVERS_FILE"; rm -f "$ODOH_RELAYS_FILE"
+[ "$USE_CRYPT" -eq 1 ] && rm -f "$CRYPT_SERVERS_FILE"
