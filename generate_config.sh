@@ -41,6 +41,7 @@ fi
 # Load functions that will be used by the script
 FUNCTION_FILE="$SCRIPT_DIR/functions.sh"
 [ -x "$FUNCTION_FILE" ] || (echo "Error, script functions not found: $FUNCTION_FILE"; exit 1)
+# shellcheck source=/dev/null
 source "$FUNCTION_FILE"
 
 # Check for source toml
@@ -75,10 +76,9 @@ fi
 
 # Run if standard (non-anonymous) DNSCrypt desired
 if [ "$USE_CRYPT" -eq 1 ]; then
-  # TODO: Finish this block
-  echo "Warning, option has not been implemented yet!"
-  exit 1
-  insert_routes "$OUTPUT_TOML" "$CRYPT_SERVERS_FILE"
+  CRYPT_SERVERS_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
+  get_standard_dnscrypt "$CRYPT_SERVERS_FILE"
+  insert_names "$OUTPUT_TOML" "$CRYPT_SERVERS_FILE"
 fi
 
 # Notify of completion
@@ -86,8 +86,9 @@ echo "
 --------------------------------------------------------------------------------
 $(basename "$0") created the config file: $OUTPUT_TOML
 "
-[ "$USE_ANON" -eq 1 ] && echo "- DNSCrypt: Randomized $(wc -l < "$ANON_SERVERS_FILE") servers and $(wc -l < "$ANON_RELAYS_FILE") relays"
+[ "$USE_ANON" -eq 1 ] && echo "- Anon DNSCrypt: Randomized $(wc -l < "$ANON_SERVERS_FILE") servers and $(wc -l < "$ANON_RELAYS_FILE") relays"
 [ "$USE_ODOH" -eq 1 ] && echo "- ODoH: Randomized $(wc -l < "$ODOH_SERVERS_FILE") servers and $(wc -l < "$ODOH_RELAYS_FILE") relays"
+[ "$USE_CRYPT" -eq 1 ] && echo "- Standard (non-anon) DNSCrypt: Randomized $(wc -l < "$CRYPT_SERVERS_FILE") servers"
 echo "- Used config template: $TEMPLATE_TOML
 --------------------------------------------------------------------------------"
 

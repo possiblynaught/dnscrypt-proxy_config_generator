@@ -61,6 +61,16 @@ get_odoh() {
   get_list "$RELAY_LINK" "$RELAY_FILE"
 }
 
+# Get servers for standard (non-anon) DNSCrypt, pass server (arg $1) file to populate
+get_standard_dnscrypt() {
+  local SERVER_FILE="$1"
+  [ -f "$SERVER_FILE" ] || (echo "Error, no server file provided: $SERVER_FILE"; exit 1)
+  local SERVER_LINK="https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md"
+  get_list "$SERVER_LINK" "$SERVER_FILE"
+  # Strip any doh configs
+  strip_doh "$SERVER_FILE" # TODO: Keep in?
+}
+
 # Select a random subset of servers from a file (arg $1) and replace it with the subset
 # Can limit the max number of servers in subset by pasing a number (arg $2)
 get_subset() {
@@ -151,11 +161,48 @@ routes = [" >> "$TOML_TOP"
     # Create new top and bottom file
     head -n "$ROUTE_END_LINE" < "$TOML_FILE" > "$TOML_TOP"
     tail -n "$((TOTAL_LINES - ROUTE_END_LINE))" < "$TOML_FILE" > "$TOML_BOTTOM"
-    # Trim a comma from the line
+    # Add a comma to the line
     sed -i "$ s/$/,/" "$TOML_TOP"
     # Fill rest of data
     loop_populate "$TOML_TOP" "$SERVER_FILE" "$RELAY_FILE"
   fi
+  # Splice together the final toml config
+  mv "$TOML_TOP" "$TOML_FILE"
+  cat "$TOML_BOTTOM" >> "$TOML_FILE"
+  rm -f "$TOML_BOTTOM"
+}
+
+# Insert server_names into a toml config (arg $1) from a server file (arg $2)
+insert_names() {
+  local TOML_FILE="$1"
+  local SERVER_FILE="$2"
+  [ -f "$TOML_FILE" ] || (echo "Error, toml file not found: $TOML_FILE"; exit 1)
+  # Get a subset of the file(s) and trim them
+  if [ -f "$SERVER_FILE" ]; then
+    get_subset "$SERVER_FILE" "$MAX_SERVERS"
+  else
+    echo "Error, server file not found: $SERVER_FILE"
+    exit 1
+  fi
+  # Create server_names string
+  SERVER_NAMES="server_names = ["
+  while read -r LINE; do
+    SERVER_NAMES="$SERVER_NAMES'$LINE', "
+  done < "$SERVER_FILE"
+  # Trim last 2 chars
+  SERVER_NAMES="${SERVER_NAMES::-2}]"
+  # Delete existing server_names if present
+  sed -i '/^server_names = /d' "$TOML_FILE"
+  sed -i '/^ server_names = /d' "$TOML_FILE"
+  # Insert new server names into global settings
+  TOTAL_LINES=$(wc -l < "$TOML_FILE")
+  GLOBAL_SECTION_LINE=$(grep -nFm 1 "Global settings" "$TOML_FILE" | cut -d ":" -f 1)
+  TOML_TOP=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
+  head -n "$((GLOBAL_SECTION_LINE + 1))" < "$TOML_FILE" > "$TOML_TOP"
+  TOML_BOTTOM=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
+  tail -n "$((TOTAL_LINES - GLOBAL_SECTION_LINE - 1))" < "$TOML_FILE" > "$TOML_BOTTOM"
+  echo "
+$SERVER_NAMES" >> "$TOML_TOP"
   # Splice together the final toml config
   mv "$TOML_TOP" "$TOML_FILE"
   cat "$TOML_BOTTOM" >> "$TOML_FILE"

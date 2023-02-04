@@ -8,7 +8,7 @@ listen_addresses = ['127.0.0.53:53']
 ## TODO
 
 - [x] Copy a base toml to dir
+- [x] Finish standard dnscrypt config
 - [ ] Figure out why the pipefail is showing error
-- [ ] Finish standard dnscrypt config
 - [ ] Finish readme + guide
 - [ ] Use a case statement or something else to handle command line args
