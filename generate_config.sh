@@ -79,6 +79,8 @@ if [ "$USE_CRYPT" -eq 1 ]; then
   CRYPT_SERVERS_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
   get_standard_dnscrypt "$CRYPT_SERVERS_FILE"
   insert_names "$OUTPUT_TOML" "$CRYPT_SERVERS_FILE"
+  # Force DNSSEC
+  sed -i "s/require_dnssec = false/require_dnssec = true/g" "$OUTPUT_TOML"
 fi
 
 # Notify of completion
