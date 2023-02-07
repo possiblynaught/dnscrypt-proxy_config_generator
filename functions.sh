@@ -4,71 +4,46 @@
 #set -x
 set -Eeo pipefail
 
+################################################################################
+# Max num of servers/relays to add from both Anonymous DNSCrypt and ODoH
+MAX_SERVERS=8
+MAX_RELAYS=5
+################################################################################
+
 # Removes any DoH (dns over https) servers from a passed list file (arg $1)
 strip_doh() {
   # Local vars
   local FILE="$1"
-  [ -f "$FILE" ] || (echo "Error, no file provided: $FILE"; exit 1)
-  sed -i "/doh/d" "$FILE"
+  if [ -z "$FILE" ]; then
+    echo "Error, no file name provided to strip_doh()"
+    exit 1
+  elif [ ! -f "$FILE" ]; then 
+    echo "Error, missing file in strip_doh(): $FILE"
+    exit 1
+  else
+    sed -i "/doh/d" "$FILE"
+  fi
 }
 
-# Simplify a server/relay .md list file passed as arg $1, edit file directly
-cleanup_list() {
-  local FILE="$1"
-  [ -f "$FILE" ] || (echo "Error, no file provided: $FILE"; exit 1)
-  # Convert a raw markdown to just the names of the servers
-  local TEMP_FILE
-  TEMP_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
-  # Simplify the list and delete ipv6 servers
-  grep -F "##" < "$FILE" | grep -vF "ipv6" | cut -d " " -f 2 >> "$TEMP_FILE" || true
-  mv "$TEMP_FILE" "$FILE"
-}
-
-# Download servers from link passed (arg $1) and output to file (arg $2)
+# Pass a link (arg $1) to a resolvers.md file, check for local copy of the file, download 
+# if no local copy, parse, and write the new parsed list to another file (arg $2)
 get_list() {
   local LINK="$1"
-  [ -n "$LINK" ] || (echo "Error, no link provided"; exit 1)
-  local FILE="$2"
-  [ -f "$FILE" ] || (echo "Error, no file provided: $FILE"; exit 1)
-  wget "$LINK" -O "$FILE"
-  cleanup_list "$FILE"
-}
-
-# Get servers and relays for Anonymous DNSCrypt, pass server (arg $1) and relay (arg $2) files to populate
-get_anon_dnscrypt() {
-  local SERVER_FILE="$1"
-  local RELAY_FILE="$2"
-  [ -f "$SERVER_FILE" ] || (echo "Error, no server file provided: $SERVER_FILE"; exit 1)
-  [ -f "$RELAY_FILE" ] || (echo "Error, no relay file provided: $RELAY_FILE"; exit 1)
-  local SERVER_LINK="https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md"
-  local RELAY_LINK="https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/relays.md"
-  get_list "$SERVER_LINK" "$SERVER_FILE"
-  get_list "$RELAY_LINK" "$RELAY_FILE"
-  # Strip any doh configs
-  strip_doh "$SERVER_FILE"
-  strip_doh "$RELAY_FILE"
-}
-
-# Get servers and relays for Oblivious DNS over HTTPS (ODoH), pass server (arg $1) and relay (arg $2) files to populate
-get_odoh() {
-  local SERVER_FILE="$1"
-  local RELAY_FILE="$2"
-  [ -f "$SERVER_FILE" ] || (echo "Error, no server file provided: $SERVER_FILE"; exit 1)
-  [ -f "$RELAY_FILE" ] || (echo "Error, no relay file provided: $RELAY_FILE"; exit 1)
-  local SERVER_LINK="https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/odoh-servers.md"
-  local RELAY_LINK="https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/odoh-relays.md"
-  get_list "$SERVER_LINK" "$SERVER_FILE"
-  get_list "$RELAY_LINK" "$RELAY_FILE"
-}
-
-# Get servers for standard (non-anon) DNSCrypt, pass server (arg $1) file to populate
-get_standard_dnscrypt() {
-  local SERVER_FILE="$1"
-  [ -f "$SERVER_FILE" ] || (echo "Error, no server file provided: $SERVER_FILE"; exit 1)
-  local SERVER_LINK="https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md"
-  get_list "$SERVER_LINK" "$SERVER_FILE"
-  # Strip any doh configs
-  strip_doh "$SERVER_FILE" # TODO: Keep in?
+  local OUTPUT_LIST="$2"
+  [ -n "$LINK" ] || (echo "Error, no link provided to get_list()"; exit 1)
+  [ -n "$OUTPUT_LIST" ] || (echo "Error, no output file provided to get_list()"; exit 1)
+  [ -f "$OUTPUT_LIST" ] && rm -f "$OUTPUT_LIST"
+  # Get resolver markdown local file name
+  MARKDOWN="$LOCAL_RESOLVES_DIR/$(echo "$LINK" | rev | cut -d "/" -f 1 | rev)"
+  # Download local files if no local copy exists
+  if [ -f "$MARKDOWN" ] && [ "$(wc -l < "$MARKDOWN")" -gt 0 ]; then
+    echo "Skipping download, found local version of: $(basename "$MARKDOWN")"
+  else 
+    rm -f "$MARKDOWN"
+    echo "Downloading local copy of: $(basename "$MARKDOWN")"
+    wget -q "$LINK" -O "$MARKDOWN" || (echo "Error downloading $(basename "$MARKDOWN"), check network connection"; exit 1)
+  fi
+  grep -F "##" < "$MARKDOWN" | grep -vF "ipv6" | cut -d " " -f 2 >> "$OUTPUT_LIST" || true
 }
 
 # Select a random subset of servers from a file (arg $1) and replace it with the subset

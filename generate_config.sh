@@ -6,20 +6,20 @@ set -Eeo pipefail
 
 # Save script dir
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
+LOCAL_RESOLVES_DIR="$SCRIPT_DIR/resolvers"
 
 ################################################################################
 # Default file paths
 OUTPUT_TOML="/tmp/dnscrypt-proxy.toml"
 TEMPLATE_TOML="$SCRIPT_DIR/example-dnscrypt-proxy.toml"
-# Max num of servers/relays to add from Anonymous DNSCrypt and ODoH
-MAX_SERVERS=8
-MAX_RELAYS=5
 ################################################################################
 
 # Check for special input options, uses Anon DNSCrypt and ODoH by default:
 #   For Anonymous DNSCrypt only, run  ->  ./generate_config.sh --anon
 #   For Oblivious DoH only, run       ->  ./generate_config.sh --odoh
 #   For standard DNSCrypt, run        ->  ./generate_config.sh --crypt
+
+# Handle args passed
 if [[ "$1" == "--anon" ]]; then
   USE_ANON=1
   USE_ODOH=0
@@ -43,8 +43,15 @@ FUNCTION_FILE="$SCRIPT_DIR/functions.sh"
 [ -x "$FUNCTION_FILE" ] || (echo "Error, script functions not found: $FUNCTION_FILE"; exit 1)
 # shellcheck source=/dev/null
 source "$FUNCTION_FILE"
+# Prep local dnscrypt-resolve directory for offline md storage
+mkdir -p "$LOCAL_RESOLVES_DIR"
+if [ ! -d "$LOCAL_RESOLVES_DIR" ]; then
+  echo "Error, local dnscrypt-resolve storeage dir missing, please create the dir:"
+  echo "$LOCAL_RESOLVES_DIR"
+  exit 1
+fi
 
-# Check for source toml
+# Check for source toml and prep the output file
 [ -f "$TEMPLATE_TOML" ] || (echo "Error, toml config template not found: $TEMPLATE_TOML"; exit 1)
 # Create output file
 cp "$TEMPLATE_TOML" "$OUTPUT_TOML"
@@ -57,30 +64,50 @@ sed -i "s/skip_incompatible = false/skip_incompatible = true/g" "$OUTPUT_TOML"
 
 # Run if Anonymous DNSCrypt desired
 if [ "$USE_ANON" -eq 1 ]; then
-  # Download Anonymous DNSCrypt lists from github
-  ANON_SERVERS_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
-  ANON_RELAYS_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
-  get_anon_dnscrypt "$ANON_SERVERS_FILE" "$ANON_RELAYS_FILE"
-  insert_routes "$OUTPUT_TOML" "$ANON_SERVERS_FILE" "$ANON_RELAYS_FILE"
+  # Anonymous DNS resolve links
+  SERVER_LINK="https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md"
+  RELAY_LINK="https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/relays.md"
+  # Get parsed lists of servers/relays
+  ANON_SERVER_LIST=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
+  ANON_RELAY_LIST=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
+  get_list "$SERVER_LINK" "$ANON_SERVER_LIST"
+  get_list "$RELAY_LINK" "$ANON_RELAY_LIST"
+  # Remove any DNS over HTTPS (DoH) servers
+  strip_doh "$ANON_SERVER_LIST"
+  strip_doh "$ANON_RELAY_LIST"
+  # Insert random configs into toml config
+  insert_routes "$OUTPUT_TOML" "$ANON_SERVER_LIST" "$ANON_RELAY_LIST"
 fi
 
 # Run if Oblivious DoH desired
 if [ "$USE_ODOH" -eq 1 ]; then
-  # Download ODoH lists from github
-  ODOH_SERVERS_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
-  ODOH_RELAYS_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
-  get_odoh "$ODOH_SERVERS_FILE" "$ODOH_RELAYS_FILE"
+  # ODoH resolve links
+  SERVER_LINK="https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/odoh-servers.md"
+  RELAY_LINK="https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/odoh-relays.md"
+  # Get parsed lists of servers/relays
+  ODOH_SERVER_LIST=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
+  ODOH_RELAY_LIST=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
+  get_list "$SERVER_LINK" "$ODOH_SERVER_LIST"
+  get_list "$RELAY_LINK" "$ODOH_RELAY_LIST"
+  # Specific ODoH toml tweaks
   enable_odoh "$OUTPUT_TOML"
-  insert_routes "$OUTPUT_TOML" "$ODOH_SERVERS_FILE" "$ODOH_RELAYS_FILE"
+  # Insert random configs into toml config
+  insert_routes "$OUTPUT_TOML" "$ODOH_SERVER_LIST" "$ODOH_RELAY_LIST"
 fi
 
 # Run if standard (non-anonymous) DNSCrypt desired
 if [ "$USE_CRYPT" -eq 1 ]; then
-  CRYPT_SERVERS_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
-  get_standard_dnscrypt "$CRYPT_SERVERS_FILE"
-  insert_names "$OUTPUT_TOML" "$CRYPT_SERVERS_FILE"
-  # Force DNSSEC
+  # DNSCrypt resolve link
+  SERVER_LINK="https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md"
+  # Get parsed list of servers
+  CRYPT_SERVER_LIST=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
+  get_list "$SERVER_LINK" "$CRYPT_SERVER_LIST"
+  # Remove any DNS over HTTPS (DoH) servers
+  strip_doh "$CRYPT_SERVER_LIST"
+  # Specific DNSCrypt toml tweak to force DNSSEC
   sed -i "s/require_dnssec = false/require_dnssec = true/g" "$OUTPUT_TOML"
+  # Insert random config into toml config
+  insert_names "$OUTPUT_TOML" "$CRYPT_SERVER_LIST"
 fi
 
 # Notify of completion
@@ -88,13 +115,16 @@ echo "
 --------------------------------------------------------------------------------
 $(basename "$0") created the config file: $OUTPUT_TOML
 "
-[ "$USE_ANON" -eq 1 ] && echo "- Anon DNSCrypt: Randomized $(wc -l < "$ANON_SERVERS_FILE") servers and $(wc -l < "$ANON_RELAYS_FILE") relays"
-[ "$USE_ODOH" -eq 1 ] && echo "- ODoH: Randomized $(wc -l < "$ODOH_SERVERS_FILE") servers and $(wc -l < "$ODOH_RELAYS_FILE") relays"
-[ "$USE_CRYPT" -eq 1 ] && echo "- Standard (non-anon) DNSCrypt: Randomized $(wc -l < "$CRYPT_SERVERS_FILE") servers"
-echo "- Used config template: $TEMPLATE_TOML
+[ "$USE_ANON" -eq 1 ] && echo "- Anon DNSCrypt: Randomized $(wc -l < "$ANON_SERVER_LIST") servers and $(wc -l < "$ANON_RELAY_LIST") relays"
+[ "$USE_ODOH" -eq 1 ] && echo "- ODoH: Randomized $(wc -l < "$ODOH_SERVER_LIST") servers and $(wc -l < "$ODOH_RELAY_LIST") relays"
+[ "$USE_CRYPT" -eq 1 ] && echo "- Standard (non-anon) DNSCrypt: Randomized $(wc -l < "$CRYPT_SERVER_LIST") servers"
+echo "- Started with toml template:
+  $TEMPLATE_TOML
+- Copy of dnscrypt-resolve files stored locally, remove to force re-download: 
+  rm -rf $LOCAL_RESOLVES_DIR
 --------------------------------------------------------------------------------"
 
 # Delete temp files no longer needed
-[ "$USE_ANON" -eq 1 ] && rm -f "$ANON_SERVERS_FILE"; rm -f "$ANON_RELAYS_FILE"
-[ "$USE_ODOH" -eq 1 ] && rm -f "$ODOH_SERVERS_FILE"; rm -f "$ODOH_RELAYS_FILE"
-[ "$USE_CRYPT" -eq 1 ] && rm -f "$CRYPT_SERVERS_FILE"
+[ "$USE_ANON" -eq 1 ] && rm -f "$ANON_SERVER_LIST"; rm -f "$ANON_RELAY_LIST"
+[ "$USE_ODOH" -eq 1 ] && rm -f "$ODOH_SERVER_LIST"; rm -f "$ODOH_RELAY_LIST"
+[ "$USE_CRYPT" -eq 1 ] && rm -f "$CRYPT_SERVER_LIST"
