@@ -1,10 +1,10 @@
 # dnscrypt-proxy config generator
 
-Generates a .toml config file for [dnscrypt-proxy2](https://github.com/DNSCrypt/dnscrypt-proxy) with random ODoH and Anonymous DNS server/relay configs.
+Generates a .toml config file for [dnscrypt-proxy 2](https://github.com/DNSCrypt/dnscrypt-proxy) with random ODoH and Anonymous DNS server/relay configs.
 
 ## USE
 
-To run this standalone config generator, please download or clone the repo, enter the *dnscrypt-proxy_config_generator* folder and run the script:
+To run this standalone config generator, please download or clone the repo, enter the *dnscrypt-proxy_config_generator/* folder and run the script:
 
 ```bash
 # To generate a mix of both Anonymous DNS and Oblivious DNS over HTTPS routes:
@@ -20,11 +20,11 @@ To run this standalone config generator, please download or clone the repo, ente
 ./generate_config.sh --crypt
 ```
 
-This will generate the toml config at ***/tmp/dnscrypt-proxy.toml*** by default, but this location can be changed by setting the *OUTPUT_TOML* variable in the generate script.
+This will generate the toml config at ***/tmp/dnscrypt-proxy.toml*** by default, but this location can be changed by updating the *OUTPUT_TOML* variable in the *generate_config.sh* script.
 
-By default, the script will choose up to 8 servers and 5 relays for each of those servers for both Anonymous DNS and Oblivious DNS over HTTPS (or 8 servers for standard DNSCrypt). You can change these limits by editing the *MAX_SERVERS* and *MAX_RELAYS* variables in the *functions.sh* script. 
+By default, the script will choose up to 8 servers and 5 relays for both Anonymous DNS and Oblivious DNS over HTTPS (or 8 servers for standard DNSCrypt). You can change these limits by editing the *MAX_SERVERS* and *MAX_RELAYS* variables in the *functions.sh* script. 
 
-On first run, the script will update server lists from web via the official dnscrypt-resolvers repo and save local copies to a .gitignored local folder. Subsiquent runs will user the local downloaded server lists, but by removing this local *resolvers/* folder, you can force the script to re-download the lists.
+On first run, the script will update server lists from web via the official dnscrypt-resolvers repo and save local copies to a .gitignored local folder. Subsiquent runs will use the locally downloaded server lists, but you can force the script to re-download the lists by removing this *dnscrypt-proxy_config_generator/resolvers/* folder.
 
 ## NOTE
 
@@ -36,5 +36,5 @@ This script starts with a toml file, *example-dnscrypt-proxy.toml*, which is the
 - [x] Finish standard dnscrypt config
 - [x] Finish readme + guide
 - [ ] Explore allowing ipv6?
-- [ ] Figure out why the pipefail is showing error
-- [ ] Use a case statement or something else to handle command line args
+- [ ] Debug pipefail error despite successful run
+- [ ] Handle command line args better

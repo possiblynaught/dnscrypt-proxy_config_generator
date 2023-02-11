@@ -15,6 +15,7 @@ TEMPLATE_TOML="$SCRIPT_DIR/example-dnscrypt-proxy.toml"
 ################################################################################
 
 # Check for special input options, uses Anon DNSCrypt and ODoH by default:
+#   Default, Anonymous DNS and ODoH   ->  ./generate_config.sh
 #   For Anonymous DNSCrypt only, run  ->  ./generate_config.sh --anon
 #   For Oblivious DoH only, run       ->  ./generate_config.sh --odoh
 #   For standard DNSCrypt, run        ->  ./generate_config.sh --crypt
@@ -121,7 +122,7 @@ $(basename "$0") created the config file: $OUTPUT_TOML
 echo "- Started with toml template:
   $TEMPLATE_TOML
 - Copy of dnscrypt-resolve files stored locally, remove to force re-download: 
-  rm -rf $LOCAL_RESOLVES_DIR
+  rm -rf $LOCAL_RESOLVES_DIR/
 --------------------------------------------------------------------------------"
 
 # Delete temp files no longer needed
