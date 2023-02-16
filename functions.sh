@@ -10,6 +10,9 @@ MAX_SERVERS=8
 MAX_RELAYS=5
 ################################################################################
 
+# Seed random with PID * timestamp
+RANDOM=$(($$ * $(date +%s)))
+
 # Removes any DoH (dns over https) servers from a passed list file (arg $1)
 strip_doh() {
   # Local vars
