@@ -5,8 +5,9 @@
 set -Eeo pipefail
 
 # Save script dir
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
-LOCAL_RESOLVES_DIR="$SCRIPT_DIR/resolvers"
+SCRIPT_DIR="$(dirname "$0")"
+LOCAL_RESOLVES_DIRECTORY="/etc/dnscrypt-proxy"
+[ ! -d "$LOCAL_RESOLVES_DIRECTORY" ] && LOCAL_RESOLVES_DIR="$SCRIPT_DIR/resolvers"
 
 ################################################################################
 # Default file paths
