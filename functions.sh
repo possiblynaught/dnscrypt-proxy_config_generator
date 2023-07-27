@@ -10,8 +10,26 @@ MAX_SERVERS=8
 MAX_RELAYS=5
 ################################################################################
 
-# Seed random with PID * timestamp
-RANDOM=$(($$ * $(date +%s)))
+# Get a random number with smallest possible:$1 and largest possible:$2
+get_random() {
+  if [ -z "$1" ] || [ -z "$2" ]; then
+    echo "Error calling get_random(), one or more args missing within: $(basename "$0")"
+    exit
+  elif [ "$1" -ge "$2" ] || [ 0 -gt "$1" ] || [ 1 -gt "$2" ]; then
+    echo "Error in get_random(), one or more args are illegal or negative"
+  fi
+  # Use random var if it exists, othewise use uuid
+  local MOD=$(($2-$1+1))
+  local RAND
+  if [ -n "$RANDOM" ]; then
+    RAND="$RANDOM"
+  else
+    RAND="$(tr -cd '1-9' < /proc/sys/kernel/random/uuid | \
+      head -c 1)$(tr -cd '0-9' < /proc/sys/kernel/random/uuid | head -c 4)"
+  fi
+  # Return random val
+  echo "$((RAND % MOD + $1))"
+}
 
 # Removes any DoH (dns over https) servers from a passed list file (arg $1)
 strip_doh() {
@@ -60,12 +78,12 @@ get_subset() {
   TEMP_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
   local NUM
   NUM=$(wc -l < "$FILE")
-  local NUM_SELECT=$((RANDOM % NUM + 1))
+  local NUM_SELECT=$(get_random "1" "$NUM")
   if [[ -n "$MAX_NUM" ]] && [[ "$NUM_SELECT" -gt "$MAX_NUM" ]]; then
     NUM_SELECT="$MAX_NUM"
   fi
   for i in $(seq 1 "$NUM_SELECT"); do 
-    SELECT=$((RANDOM % NUM + 1))
+    SELECT=$(get_random "1" "$NUM")
     head -n "$SELECT" < "$FILE" | tail -n 1 >> "$TEMP_FILE"
   done
   sort "$TEMP_FILE" | uniq > "$FILE"

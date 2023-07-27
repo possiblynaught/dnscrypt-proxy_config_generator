@@ -20,6 +20,8 @@ if [ ! -f "$INSTALL_CONFIG" ]; then
   exit 1
 fi
 
+# TODO: copy markdown resolvers here
+
 # Check for subscrpts
 GEN_SCRIPT="$SCRIPT_DIR/generate_config.sh"
 if [ ! -x "$GEN_SCRIPT" ]; then
@@ -28,7 +30,7 @@ if [ ! -x "$GEN_SCRIPT" ]; then
 fi
 # Generate a new config
 TEMP_CONFIG="/tmp/dnscrypt-proxy.toml"
-"$GEN_SCRIPT" "PLACEHOLDER" "$INSTALL_CONFIG" || true # TODO: Fix this
+source "$GEN_SCRIPT" "PLACEHOLDER" "$INSTALL_CONFIG" || true # TODO: Fix this
 cp "$INSTALL_CONFIG" "$INSTALL_CONFIG.old" || sudo cp "$INSTALL_CONFIG" "$INSTALL_CONFIG.old"
 mv "$TEMP_CONFIG" "$INSTALL_CONFIG" || sudo mv "$TEMP_CONFIG" "$INSTALL_CONFIG"
 
