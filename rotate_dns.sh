@@ -12,11 +12,11 @@ set -Eeo pipefail
 SCRIPT_DIR="$(dirname "$0")"
 
 # Check for dnscrypt
-INSTALL_DIRECTORY="/etc/dnscrypt-proxy"
-[ -d "${INSTALL_DIRECTORY}2" ] && INSTALL_DIRECTORY="/etc/dnscrypt-proxy2"
+INSTALL_DIR="/etc/dnscrypt-proxy"
+[ -d "${INSTALL_DIR}2" ] && INSTALL_DIR="${INSTALL_DIR}2"
 INSTALL_CONFIG="$INSTALL_DIR/dnscrypt-proxy.toml"
 if [ ! -f "$INSTALL_CONFIG" ]; then
-  echo "Error, dnscrypt doesn't appear to be installed: $INSTALL_DIRECTORY"
+  echo "Error, dnscrypt doesn't appear to be installed: $INSTALL_DIR"
   exit 1
 fi
 
