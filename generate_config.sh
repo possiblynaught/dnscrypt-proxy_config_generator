@@ -40,6 +40,9 @@ else
   USE_CRYPT=0
 fi
 
+# Handle seperate template
+[ -s "$2" ] && TEMPLATE_TOML="$2" 
+
 # Load functions that will be used by the script
 FUNCTION_FILE="$SCRIPT_DIR/functions.sh"
 [ -x "$FUNCTION_FILE" ] || (echo "Error, script functions not found: $FUNCTION_FILE"; exit 1)

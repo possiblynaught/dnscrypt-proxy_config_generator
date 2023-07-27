@@ -26,14 +26,11 @@ if [ ! -x "$GEN_SCRIPT" ]; then
   echo "Error, generate script not found: $GEN_SCRIPT"
   exit 1
 fi
-
 # Generate a new config
 TEMP_CONFIG="/tmp/dnscrypt-proxy.toml"
-"$GEN_SCRIPT" || true # TODO: Fix this
-
-# Backup old and move new in
-[ -s "$INSTALL_CONFIG" ] && mv "$INSTALL_CONFIG" "$INSTALL_CONFIG.old"
-mv "$TEMP_CONFIG" "$INSTALL_CONFIG"
+"$GEN_SCRIPT" "PLACEHOLDER" "$INSTALL_CONFIG" || true # TODO: Fix this
+cp "$INSTALL_CONFIG" "$INSTALL_CONFIG.old" || sudo cp "$INSTALL_CONFIG" "$INSTALL_CONFIG.old"
+mv "$TEMP_CONFIG" "$INSTALL_CONFIG" || sudo mv "$TEMP_CONFIG" "$INSTALL_CONFIG"
 
 # Restart dnscrypt
 if command -v systemctl &> /dev/null; then

@@ -37,7 +37,8 @@ get_list() {
   [ -n "$OUTPUT_LIST" ] || (echo "Error, no output file provided to get_list()"; exit 1)
   [ -f "$OUTPUT_LIST" ] && rm -f "$OUTPUT_LIST"
   # Get resolver markdown local file name
-  MARKDOWN="$LOCAL_RESOLVES_DIR/$(echo "$LINK" | rev | cut -d "/" -f 1 | rev)"
+  MARKDOWN="${LINK##*/}"
+  MARKDOWN="$LOCAL_RESOLVES_DIR/$MARKDOWN"
   # Download local files if no local copy exists
   if [ -f "$MARKDOWN" ] && [ "$(wc -l < "$MARKDOWN")" -gt 0 ]; then
     echo "Skipping download, found local version of: $(basename "$MARKDOWN")"
