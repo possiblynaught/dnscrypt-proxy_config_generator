@@ -218,7 +218,7 @@ enable_odoh() {
   # Splice in uncommented odoh config if it isn't already present 
   TEMP_TOML=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
   head -n "$ODOH_LINE" < "$TOML_FILE" > "$TEMP_TOML"
-  if grep -qF "# [sources.odoh-servers]" < "$TOML_FILE"; then
+  if grep -qF "# [sources.odoh-servers]" < "$TOML_FILE" && ! grep -qF "  [sources.odoh-servers]" < "$TOML_FILE"; then
     echo "
   [sources.odoh-servers]
     urls = ['https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/odoh-servers.md', 'https://download.dnscrypt.info/resolvers-list/v3/odoh-servers.md', 'https://ipv6.download.dnscrypt.info/resolvers-list/v3/odoh-servers.md']
@@ -227,7 +227,7 @@ enable_odoh() {
     refresh_delay = 24
     prefix = ''" >> "$TEMP_TOML"
   fi
-  if grep -qF "# [sources.odoh-relays]" < "$TOML_FILE"; then
+  if grep -qF "# [sources.odoh-relays]" < "$TOML_FILE" && ! grep -qF "  [sources.odoh-relays]" < "$TOML_FILE"; then
     echo "  [sources.odoh-relays]
     urls = ['https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/odoh-relays.md', 'https://download.dnscrypt.info/resolvers-list/v3/odoh-relays.md', 'https://ipv6.download.dnscrypt.info/resolvers-list/v3/odoh-relays.md']
     cache_file = 'odoh-relays.md'
