@@ -20,14 +20,13 @@ if [ ! -f "$INSTALL_CONFIG" ]; then
   exit 1
 fi
 
-# TODO: copy markdown resolvers here
-
 # Check for subscrpts
 GEN_SCRIPT="$SCRIPT_DIR/generate_config.sh"
 if [ ! -x "$GEN_SCRIPT" ]; then
   echo "Error, generate script not found: $GEN_SCRIPT"
   exit 1
 fi
+
 # Generate a new config
 TEMP_CONFIG="/tmp/dnscrypt-proxy.toml"
 source "$GEN_SCRIPT" "PLACEHOLDER" "$INSTALL_CONFIG" || true # TODO: Fix this

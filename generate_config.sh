@@ -57,7 +57,7 @@ if [ ! -d "$LOCAL_RESOLVES_DIR" ]; then
 fi
 
 # Check for source toml and prep the output file
-[ -f "$TEMPLATE_TOML" ] || (echo "Error, toml config template not found: $TEMPLATE_TOML"; exit 1)
+[ -s "$TEMPLATE_TOML" ] || (echo "Error, toml config template not found: $TEMPLATE_TOML"; exit 1)
 # Create output file
 cp "$TEMPLATE_TOML" "$OUTPUT_TOML"
 # Disable doh
@@ -80,6 +80,8 @@ if [ "$USE_ANON" -eq 1 ]; then
   # Remove any DNS over HTTPS (DoH) servers
   strip_doh "$ANON_SERVER_LIST"
   strip_doh "$ANON_RELAY_LIST"
+  # Remove existing ODoH and AnonymousDNS routes
+  strip_anonymous_oblivious_dns "$OUTPUT_TOML"
   # Insert random configs into toml config
   insert_routes "$OUTPUT_TOML" "$ANON_SERVER_LIST" "$ANON_RELAY_LIST"
 fi

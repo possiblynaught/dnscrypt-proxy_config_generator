@@ -46,6 +46,41 @@ strip_doh() {
   fi
 }
 
+# Removes any AnonymousDNS or ODoH routes from a config file passed (arg $1)
+strip_anonymous_oblivious_dns() {
+  # Local vars
+  local TOML_FILE="$1"
+  if [ -z "$TOML_FILE" ]; then
+    echo "Error, no file name provided to strip_anonymous_oblivious_dns()"
+    exit 1
+  elif [ ! -f "$TOML_FILE" ]; then 
+    echo "Error, missing file in strip_anonymous_oblivious_dns(): $TOML_FILE"
+    exit 1
+  else
+    # Local vars
+    local TOTAL_LINES
+    local ANON_SECTION_LINE
+    local TOML_TOP
+    local TOML_BOTTOM
+    local ROUTE_END_LINE
+    # Cut the anonymized_dns section from the toml
+    TOTAL_LINES=$(wc -l < "$TOML_FILE")
+    ANON_SECTION_LINE=$(grep -nFm 1 "[anonymized_dns]" "$TOML_FILE" | cut -d ":" -f 1)
+    TOML_TOP=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
+    head -n "$ANON_SECTION_LINE" < "$TOML_FILE" > "$TOML_TOP"
+    TOML_BOTTOM=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
+    tail -n "$((TOTAL_LINES - ANON_SECTION_LINE))" < "$TOML_FILE" > "$TOML_BOTTOM"
+    # Check for an existing routes section
+    if grep -q '^routes' < "$TOML_BOTTOM"; then
+      # If there a route section, delete it
+      sed '/^routes/,/^]/d' "$TOML_BOTTOM" >> "$TOML_TOP"
+      mv "$TOML_TOP" "$TOML_FILE"
+    fi
+    rm -f "$TOML_TOP"
+    rm -f "$TOML_BOTTOM"
+  fi
+}
+
 # Pass a link (arg $1) to a resolvers.md file, check for local copy of the file, download 
 # if no local copy, parse, and write the new parsed list to another file (arg $2)
 get_list() {
@@ -78,7 +113,8 @@ get_subset() {
   TEMP_FILE=$(mktemp /tmp/gen_dnscrypt.XXXXXX || exit 1)
   local NUM
   NUM=$(wc -l < "$FILE")
-  local NUM_SELECT=$(get_random "1" "$NUM")
+  local NUM_SELECT
+  NUM_SELECT=$(get_random "1" "$NUM")
   if [[ -n "$MAX_NUM" ]] && [[ "$NUM_SELECT" -gt "$MAX_NUM" ]]; then
     NUM_SELECT="$MAX_NUM"
   fi
@@ -129,6 +165,11 @@ insert_routes() {
   local RELAY_FILE="$3"
   [ -f "$TOML_FILE" ] || (echo "Error, toml file not found: $TOML_FILE"; exit 1)
   local RELAY_STRING=""
+  local TOTAL_LINES
+  local ANON_SECTION_LINE
+  local TOML_TOP
+  local TOML_BOTTOM
+  local ROUTE_END_LINE
   # Get a subset of the file(s) and trim them
   if [ -f "$SERVER_FILE" ]; then
     get_subset "$SERVER_FILE" "$MAX_SERVERS"
